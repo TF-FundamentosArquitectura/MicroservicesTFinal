@@ -3,20 +3,264 @@ version: '3.8'
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
-    depends_on:
-      - zookeeper
+    container_name: kafka
     ports:
       - "9092:9092"
+    depends_on:
+      - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: ../Dockerfile # Path relative to context
+      args:
+        JAR_FILE_PATH: target/eureka-server-0.0.1-SNAPSHOT.jar
+        SERVICE_PORT: 8761
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_APPLICATION_NAME: eureka-server
+      SERVER_PORT: 8761
+      # Using the application.properties for these:
+      # EUREKA_CLIENT_REGISTERWITHEUREKA: "false"
+      # EUREKA_CLIENT_FETCHREGISTRY: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  admin-server:
+    build:
+      context: ./admin-server
+      dockerfile: ../Dockerfile
+      args:
+        JAR_FILE_PATH: target/admin-server-0.0.1-SNAPSHOT.jar
+        SERVICE_PORT: 8080
+    container_name: admin-server
+    ports:
+      - "8080:8080"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: admin-server
+      SERVER_PORT: 8080
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_BOOT_ADMIN_CLIENT_URL: http://admin-server:8080 # For self-registration if needed by clients
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: ../Dockerfile
+      args:
+        JAR_FILE_PATH: target/api-gateway-0.0.1-SNAPSHOT.jar
+        SERVICE_PORT: 8081
+    container_name: api-gateway
+    ports:
+      - "8081:8081"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: api-gateway
+      SERVER_PORT: 8081
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_ENABLED: "true"
+      # SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_LOWERCASE_SERVICEID: "true" # If Eureka names are uppercase
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  users-management-system:
+    build:
+      context: ./users-management-system
+      dockerfile: ../Dockerfile
+      args:
+        JAR_FILE_PATH: target/users-management-system-0.0.1-SNAPSHOT.jar
+        SERVICE_PORT: 8082
+    container_name: users-management-system
+    ports:
+      - "8082:8082"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started # Kafka doesn't have a simple health check by default
+    environment:
+      SPRING_APPLICATION_NAME: users-management-system # Must match what api-gateway expects if using discovery locator default /SERVICE_ID/**
+      SERVER_PORT: 8082
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_KAFKA_PRODUCER_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER: org.springframework.kafka.support.serializer.JsonSerializer
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/users_db?createDatabaseIfNotExist=true # Assumes DB on host
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      # For Spring Boot Admin client registration:
+      SPRING_BOOT_ADMIN_CLIENT_URL: http://admin-server:8080
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      MANAGEMENT_ENDPOINT_HEALTH_SHOWDETAILS: "always"
+
+  service-management-system:
+    build:
+      context: ./service-management-system
+      dockerfile: ../Dockerfile
+      args:
+        JAR_FILE_PATH: target/service-management-system-0.0.1-SNAPSHOT.jar
+        SERVICE_PORT: 8083
+    container_name: service-management-system
+    ports:
+      - "8083:8083"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: service-management-system
+      SERVER_PORT: 8083
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/services_db?createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASource_PASSWORD: 123456
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_BOOT_ADMIN_CLIENT_URL: http://admin-server:8080
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      MANAGEMENT_ENDPOINT_HEALTH_SHOWDETAILS: "always"
+
+  appointment-management-system:
+    build:
+      context: ./appointment-management-system
+      dockerfile: ../Dockerfile
+      args:
+        JAR_FILE_PATH: target/appointment-management-system-0.0.1-SNAPSHOT.jar
+        SERVICE_PORT: 8084
+    container_name: appointment-management-system
+    ports:
+      - "8084:8084"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: appointment-management-system
+      SERVER_PORT: 8084
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/appointments_db?createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_BOOT_ADMIN_CLIENT_URL: http://admin-server:8080
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      MANAGEMENT_ENDPOINT_HEALTH_SHOWDETAILS: "always"
+
+  review-management-system:
+    build:
+      context: ./review-management-system
+      dockerfile: ../Dockerfile
+      args:
+        JAR_FILE_PATH: target/review-management-system-0.0.1-SNAPSHOT.jar
+        SERVICE_PORT: 8085
+    container_name: review-management-system
+    ports:
+      - "8085:8085"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: review-management-system
+      SERVER_PORT: 8085
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/reviews_db?createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_BOOT_ADMIN_CLIENT_URL: http://admin-server:8080
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      MANAGEMENT_ENDPOINT_HEALTH_SHOWDETAILS: "always"
+
+  notification-management-system:
+    build:
+      context: ./notification-management-system
+      dockerfile: ../Dockerfile
+      args:
+        JAR_FILE_PATH: target/notification-management-system-0.0.1-SNAPSHOT.jar
+        SERVICE_PORT: 8086
+    container_name: notification-management-system
+    ports:
+      - "8086:8086"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      SPRING_APPLICATION_NAME: notification-management-system
+      SERVER_PORT: 8086
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_KAFKA_CONSUMER_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_CONSUMER_GROUP_ID: notification-group # Should match KafkaConfig
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/notifications_db?createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_BOOT_ADMIN_CLIENT_URL: http://admin-server:8080
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      MANAGEMENT_ENDPOINT_HEALTH_SHOWDETAILS: "always"
+
+  payment-management-system:
+    build:
+      context: ./payment-management-system
+      dockerfile: ../Dockerfile
+      args:
+        JAR_FILE_PATH: target/payment-management-system-0.0.1-SNAPSHOT.jar
+        SERVICE_PORT: 8087
+    container_name: payment-management-system
+    ports:
+      - "8087:8087"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      SPRING_APPLICATION_NAME: payment-management-system
+      SERVER_PORT: 8087
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_KAFKA_PRODUCER_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_CONSUMER_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_CONSUMER_GROUP_ID: payment-group
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/payments_db?createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_BOOT_ADMIN_CLIENT_URL: http://admin-server:8080
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      MANAGEMENT_ENDPOINT_HEALTH_SHOWDETAILS: "always"
+
+networks:
+  default:
+    name: microservices-network

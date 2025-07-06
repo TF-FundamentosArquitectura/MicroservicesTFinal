@@ -1,20 +1,27 @@
 package com.bliss.user.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import com.bliss.user.model.User;
 import com.bliss.user.service.UserService;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/users") // Assuming API Gateway will route /api/users or similar to /users here
 public class UserController {
+
+    private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     @Autowired
     private UserService userService;
 
     @PostMapping("/register")
     public User registerUser(@RequestBody User user) {
-        return userService.registerUser(user);
+        log.info("User registration request received for username: {}", user.getUsername());
+        User registeredUser = userService.registerUser(user);
+        log.info("User registration processed for ID: {}", registeredUser.getId());
+        return registeredUser;
     }
 
     @GetMapping("/{username}")

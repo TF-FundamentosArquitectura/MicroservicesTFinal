@@ -12,9 +12,10 @@ public class Notification {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long userId;
+    private Long userId; // ID of the user this notification is for
+    private String type; // Type of notification, e.g., "USER_REGISTRATION", "APPOINTMENT_REMINDER"
     private String message;
-    private String status;
+    private boolean isRead; // Status if the notification has been read
     private LocalDateTime createdDate;
 
     // Getters and setters
@@ -30,17 +31,23 @@ public class Notification {
     public void setUserId(Long userId) {
         this.userId = userId;
     }
+    public String getType() {
+        return type;
+    }
+    public void setType(String type) {
+        this.type = type;
+    }
     public String getMessage() {
         return message;
     }
     public void setMessage(String message) {
         this.message = message;
     }
-    public String getStatus() {
-        return status;
+    public boolean isRead() {
+        return isRead;
     }
-    public void setStatus(String status) {
-        this.status = status;
+    public void setRead(boolean read) {
+        isRead = read;
     }
     public LocalDateTime getCreatedDate() {
         return createdDate;

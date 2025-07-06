@@ -1,5 +1,5 @@
 # Use an official OpenJDK runtime as a parent image
-FROM openjdk:17-jdk-slim
+FROM openjdk:21-jdk-slim
 
 # Arguments for JAR file name and path
 ARG JAR_FILE_PATH

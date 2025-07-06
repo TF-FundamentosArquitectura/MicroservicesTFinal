@@ -51,9 +51,35 @@
             <groupId>de.codecentric</groupId>
             <artifactId>spring-boot-admin-starter-server</artifactId>
             <version>3.1.8</version>
+            <exclusions>
+                <!-- Exclude parts of Eureka client if SBA brings them, to avoid conflict -->
+                <!-- We want to use the Eureka client from spring-cloud-starter-netflix-eureka-client -->
+                <exclusion>
+                    <groupId>org.springframework.cloud</groupId>
+                    <artifactId>spring-cloud-netflix-eureka-client</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.netflix.eureka</groupId>
+                    <artifactId>eureka-client</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.netflix.eureka</groupId>
+                    <artifactId>eureka-core</artifactId>
+                </exclusion>
+                <!-- Also exclude Jersey if it's being pulled transitively and causing issues -->
+                <exclusion>
+                    <groupId>org.glassfish.jersey.core</groupId>
+                    <artifactId>jersey-client</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.glassfish.jersey.inject</groupId>
+                    <artifactId>jersey-hk2</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- EUREKA CLIENT -->
+        <!-- This is the primary Eureka client dependency we want to use -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>

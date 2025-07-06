@@ -120,7 +120,7 @@ services:
       SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER: org.springframework.kafka.support.serializer.JsonSerializer
       SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/users_db?createDatabaseIfNotExist=true # Assumes DB on host
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_DATASOURCE_PASSWORD:
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       # For Spring Boot Admin client registration:
       SPRING_BOOT_ADMIN_CLIENT_URL: http://admin-server:8080
@@ -146,7 +146,7 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/services_db?createDatabaseIfNotExist=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASource_PASSWORD: 123456
+      SPRING_DATASOURCE_PASSWORD: ""
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_BOOT_ADMIN_CLIENT_URL: http://admin-server:8080
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
@@ -171,7 +171,7 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/appointments_db?createDatabaseIfNotExist=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_DATASOURCE_PASSWORD: ""
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_BOOT_ADMIN_CLIENT_URL: http://admin-server:8080
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
@@ -196,7 +196,7 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/reviews_db?createDatabaseIfNotExist=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_DATASOURCE_PASSWORD: ""
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_BOOT_ADMIN_CLIENT_URL: http://admin-server:8080
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
@@ -225,7 +225,7 @@ services:
       SPRING_KAFKA_CONSUMER_GROUP_ID: notification-group # Should match KafkaConfig
       SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/notifications_db?createDatabaseIfNotExist=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_DATASOURCE_PASSWORD: ""
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_BOOT_ADMIN_CLIENT_URL: http://admin-server:8080
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
@@ -255,7 +255,7 @@ services:
       SPRING_KAFKA_CONSUMER_GROUP_ID: payment-group
       SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/payments_db?createDatabaseIfNotExist=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_DATASOURCE_PASSWORD: ""
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_BOOT_ADMIN_CLIENT_URL: http://admin-server:8080
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"

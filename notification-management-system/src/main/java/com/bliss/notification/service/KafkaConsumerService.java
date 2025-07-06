@@ -1,6 +1,7 @@
 package com.bliss.notification.service;
 
 import com.bliss.notification.model.Notification;
+import com.bliss.notification.repository.NotificationRepository; // Added import
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

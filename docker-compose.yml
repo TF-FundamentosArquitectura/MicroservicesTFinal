@@ -1,22 +1,168 @@
-version: '3.8'
-
+version: '3'
 services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+  discovery:
+    image: microservice-docker-discovery:0.0.1-SNAPSHOT
     ports:
-      - "2181:2181"
+      - 8761:8761
+    networks:
+      - microservices-net
+
+  config:
+    image: microservice-docker-config:0.0.1-SNAPSHOT
+    links:
+      - discovery
+    environment:
+      - JAVA_OPTS=-DEUREKA_SERVER=http://discovery:8761/eureka
+    depends_on:
+      - discovery
+    ports:
+      - 8888:8888
+    networks:
+      - microservices-net
+
+  school-service:
+    image: microservice-docker-school-service:0.0.1-SNAPSHOT
+    environment:
+      - JAVA_OPTS=-DEUREKA_SERVER=http://discovery:8761/eureka
+    depends_on:
+      - discovery
+      - config
+    networks:
+      - microservices-net
+
+  school-ui:
+    image: microservice-docker-school-ui:0.0.1-SNAPSHOT
+    environment:
+      - JAVA_OPTS=-DEUREKA_SERVER=http://discovery:8761/eureka
+    restart: on-failure
+    depends_on:
+      - discovery
+      - config
+    ports:
+      - 8080:8080
+    networks:
+      - microservices-net
+
+  appointment-system:
+    image: microservice-docker-appointment-system:0.0.1-SNAPSHOT
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/appointments_db?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - SPRING_APPLICATION_NAME=appointment-system
+    depends_on:
+      - db
+    ports:
+      - 8084:8084
+    networks:
+      - microservices-net
+
+  notification-system:
+    image: microservice-docker-notification-system:0.0.1-SNAPSHOT
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/notifications_db?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - SPRING_APPLICATION_NAME=notification-system
+    depends_on:
+      - db
+    ports:
+      - 8086:8086
+    networks:
+      - microservices-net
+
+  payment-system:
+    image: microservice-docker-payment-system:0.0.1-SNAPSHOT
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/payments_db?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - SPRING_APPLICATION_NAME=payment-system
+    depends_on:
+      - db
+    ports:
+      - 8087:8087
+    networks:
+      - microservices-net
+
+  review-management-service:
+    image: microservice-docker-review-management-service:0.0.1-SNAPSHOT
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/reviews_db?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - SPRING_APPLICATION_NAME=review-management-service
+    depends_on:
+      - db
+    ports:
+      - 8085:8085
+    networks:
+      - microservices-net
+
+  service-management-service:
+    image: microservice-docker-service-management-service:0.0.1-SNAPSHOT
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/services_db?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - SPRING_APPLICATION_NAME=service-management-service
+    depends_on:
+      - db
+    ports:
+      - 8083:8083
+    networks:
+      - microservices-net
+
+  users-management-system:
+    image: microservice-docker-users-management-system:0.0.1-SNAPSHOT
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/users_db?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - SPRING_APPLICATION_NAME=users-management-system
+    depends_on:
+      - db
+    ports:
+      - 8082:8082
+    networks:
+      - microservices-net
+
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - microservices-net
 
   kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    depends_on:
-      - zookeeper
-    ports:
-      - "9092:9092"
+    image: wurstmeister/kafka
     environment:
-      KAFKA_BROKER_ID: 1
+      KAFKA_ADVERTISED_LISTENER: INSIDE_KAFKA:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
+      KAFKA_LISTENER_NAME: INSIDE_KAFKA
+      KAFKA_LISTENER_PORT: 9093
+      KAFKA_LISTENER_INTERNAL: INSIDE_KAFKA
+      KAFKA_LISTENER: INSIDE_KAFKA://kafka:9093
+      KAFKA_LISTENER_NAME_INTERNAL: INSIDE_KAFKA
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9093"
+    networks:
+      - microservices-net
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+    networks:
+      - microservices-net
+
+networks:
+  microservices-net:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local

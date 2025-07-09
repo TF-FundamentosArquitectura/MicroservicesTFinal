@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.bliss.user.repository.UserRepository;
 import com.bliss.user.model.User;
-
+import java.util.List;  // Importar para manejar listas de usuarios
 import java.time.LocalDateTime;
 
 @Service
@@ -29,5 +29,10 @@ public class UserService {
         existingUser.setPassword(user.getPassword());
         existingUser.setRole(user.getRole());
         return userRepository.save(existingUser);
+    }
+
+    // Nuevo método para obtener todos los usuarios
+    public List<User> getAllUsers() {
+        return userRepository.findAll();  // Devuelve todos los usuarios
     }
 }
